@@ -130,17 +130,13 @@ if (autoLockError) {
 
     // Get user's predictions
 
-    const {
+const {
     data: predictions,
     error: predictionsError
 } = await supabaseClient
     .from("predictions")
-    .select(`
-        *,
-        profiles (
-            display_name
-        )
-    `);
+    .select("*")
+    .eq("user_id", user.id);
 
     console.log("Games returned:", games);
     console.log("Games error:", gamesError);
