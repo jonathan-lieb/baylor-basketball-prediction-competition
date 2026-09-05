@@ -1,0 +1,515 @@
+// ------------------------------------------------------------
+// AUTHENTICATION
+// ------------------------------------------------------------
+
+async function getCurrentUser() {
+
+    const {
+        data: { user }
+    } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+
+        window.location.href = "login.html";
+
+        return null;
+    }
+
+    return user;
+}
+
+
+// ------------------------------------------------------------
+// FORMAT DATE
+// ------------------------------------------------------------
+
+function formatGameDate(dateString) {
+
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString(
+        undefined,
+        {
+            weekday: "short",
+            month: "short",
+            day: "numeric"
+        }
+    );
+}
+
+
+// ------------------------------------------------------------
+// FORMAT TIME
+// ------------------------------------------------------------
+
+function formatGameTime(dateString) {
+
+    const date = new Date(dateString);
+
+    return date.toLocaleTimeString(
+        undefined,
+        {
+            hour: "numeric",
+            minute: "2-digit"
+        }
+    );
+}
+
+
+// ------------------------------------------------------------
+// LOAD PREDICTIONS
+// ------------------------------------------------------------
+
+async function loadPredictions() {
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+        return;
+    }
+
+
+    const welcomeMessage =
+        document.getElementById("welcome-message");
+
+
+    // Get profile
+
+    const {
+        data: profile,
+        error: profileError
+    } = await supabaseClient
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .single();
+
+
+    if (!profileError && profile) {
+
+        welcomeMessage.textContent =
+            `Welcome, ${profile.display_name}`;
+
+    }
+
+
+    // Get games
+
+    const {
+        data: games,
+        error: gamesError
+    } = await supabaseClient
+        .from("games")
+        .select("*")
+        .order("tipoff_time", {
+            ascending: true
+        });
+
+
+    if (gamesError) {
+
+        console.error(gamesError);
+
+        document.getElementById(
+            "predictions-container"
+        ).textContent =
+            "Unable to load games.";
+
+        return;
+    }
+
+
+    // Get user's predictions
+
+    const {
+        data: predictions,
+        error: predictionsError
+    } = await supabaseClient
+        .from("predictions")
+        .select("*")
+        .eq("user_id", user.id);
+
+
+    if (predictionsError) {
+
+        console.error(predictionsError);
+
+        document.getElementById(
+            "predictions-container"
+        ).textContent =
+            "Unable to load predictions.";
+
+        return;
+    }
+
+
+    // Turn predictions into a lookup object
+
+    const predictionMap = {};
+
+    predictions.forEach(function(prediction) {
+
+        predictionMap[prediction.game_id] =
+            prediction;
+
+    });
+
+
+    const container =
+        document.getElementById(
+            "predictions-container"
+        );
+
+
+    container.innerHTML = "";
+
+
+    // Create a card for every game
+
+    games.forEach(function(game) {
+
+        const prediction =
+            predictionMap[game.id];
+
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "game-card";
+
+
+        const title =
+            document.createElement("h3");
+
+        title.textContent =
+            `Baylor vs. ${game.opponent}`;
+
+        card.appendChild(title);
+
+
+        const date =
+            document.createElement("p");
+
+        date.textContent =
+            `${formatGameDate(game.tipoff_time)} • ` +
+            `${formatGameTime(game.tipoff_time)} • ` +
+            `${game.location}`;
+
+        card.appendChild(date);
+
+
+        // Probability input
+
+        const label =
+            document.createElement("label");
+
+        label.textContent =
+            "Baylor win probability:";
+
+        card.appendChild(label);
+
+
+        const input =
+            document.createElement("input");
+
+        input.type = "number";
+
+        input.min = "0";
+
+        input.max = "100";
+
+        input.step = "1";
+
+        input.className =
+            "probability-input";
+
+
+        if (prediction) {
+
+            input.value =
+                Math.round(
+                    Number(prediction.probability) * 100
+                );
+
+        }
+
+
+        card.appendChild(input);
+
+
+        // Save button
+
+        const saveButton =
+            document.createElement("button");
+
+        saveButton.textContent =
+            "Save";
+
+        saveButton.className =
+            "button";
+
+
+        // Lock button
+
+        const lockButton =
+            document.createElement("button");
+
+        lockButton.textContent =
+            "Lock";
+
+        lockButton.className =
+            "button";
+
+
+        const status =
+            document.createElement("span");
+
+        status.className =
+            "prediction-status";
+
+
+        // Existing locked prediction
+
+        if (
+            prediction &&
+            prediction.user_locked
+        ) {
+
+            input.disabled = true;
+
+            saveButton.disabled = true;
+
+            lockButton.disabled = true;
+
+            status.textContent =
+                " 🔒 Locked";
+
+        }
+
+
+        // Save prediction
+
+        saveButton.addEventListener(
+            "click",
+            async function() {
+
+                await savePrediction(
+                    user.id,
+                    game.id,
+                    input,
+                    status
+                );
+
+            }
+        );
+
+
+        // Lock prediction
+
+        lockButton.addEventListener(
+            "click",
+            async function() {
+
+                await lockPrediction(
+                    user.id,
+                    game.id,
+                    input,
+                    saveButton,
+                    lockButton,
+                    status
+                );
+
+            }
+        );
+
+
+        card.appendChild(saveButton);
+
+        card.appendChild(lockButton);
+
+        card.appendChild(status);
+
+
+        container.appendChild(card);
+
+    });
+
+}
+
+
+// ------------------------------------------------------------
+// SAVE PREDICTION
+// ------------------------------------------------------------
+
+async function savePrediction(
+    userId,
+    gameId,
+    input,
+    status
+) {
+
+    const percentage =
+        Number(input.value);
+
+
+    if (
+        Number.isNaN(percentage) ||
+        percentage < 0 ||
+        percentage > 100
+    ) {
+
+        status.textContent =
+            " Enter a probability from 0 to 100.";
+
+        return;
+    }
+
+
+    const probability =
+        percentage / 100;
+
+
+    const {
+        error
+    } = await supabaseClient
+        .from("predictions")
+        .upsert(
+            {
+                user_id: userId,
+                game_id: gameId,
+                probability: probability
+            },
+            {
+                onConflict:
+                    "user_id,game_id"
+            }
+        );
+
+
+    if (error) {
+
+        console.error(error);
+
+        status.textContent =
+            ` ${error.message}`;
+
+        return;
+    }
+
+
+    status.textContent =
+        " ✓ Saved";
+
+}
+
+
+// ------------------------------------------------------------
+// LOCK PREDICTION
+// ------------------------------------------------------------
+
+async function lockPrediction(
+    userId,
+    gameId,
+    input,
+    saveButton,
+    lockButton,
+    status
+) {
+
+    const percentage =
+        Number(input.value);
+
+
+    if (
+        Number.isNaN(percentage) ||
+        percentage < 0 ||
+        percentage > 100
+    ) {
+
+        status.textContent =
+            " Enter a probability from 0 to 100 first.";
+
+        return;
+    }
+
+
+    const probability =
+        percentage / 100;
+
+
+    // First create/update the prediction
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("predictions")
+        .upsert(
+            {
+                user_id: userId,
+                game_id: gameId,
+                probability: probability,
+                user_locked: true
+            },
+            {
+                onConflict:
+                    "user_id,game_id"
+            }
+        )
+        .select()
+        .single();
+
+
+    if (error) {
+
+        console.error(error);
+
+        status.textContent =
+            ` ${error.message}`;
+
+        return;
+    }
+
+
+    // Disable controls
+
+    input.disabled = true;
+
+    saveButton.disabled = true;
+
+    lockButton.disabled = true;
+
+
+    status.textContent =
+        " 🔒 Locked";
+
+}
+
+
+// ------------------------------------------------------------
+// LOG OUT
+// ------------------------------------------------------------
+
+document
+    .getElementById("logout-button")
+    .addEventListener(
+        "click",
+        async function() {
+
+            await supabaseClient.auth.signOut();
+
+            window.location.href =
+                "index.html";
+
+        }
+    );
+
+
+// ------------------------------------------------------------
+// START
+// ------------------------------------------------------------
+
+loadPredictions();
+
+
