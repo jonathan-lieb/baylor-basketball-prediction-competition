@@ -67,6 +67,15 @@ async function loadPredictions() {
     if (!user) {
         return;
     }
+    
+    // Automatically lock predictions for games that have started
+const { error: autoLockError } = await supabaseClient.rpc(
+    "auto_lock_started_predictions"
+);
+
+if (autoLockError) {
+    console.error("Automatic lock error:", autoLockError);
+}
 
 
     const welcomeMessage =
@@ -122,12 +131,16 @@ async function loadPredictions() {
     // Get user's predictions
 
     const {
-        data: predictions,
-        error: predictionsError
-    } = await supabaseClient
-        .from("predictions")
-        .select("*")
-        .eq("user_id", user.id);
+    data: predictions,
+    error: predictionsError
+} = await supabaseClient
+    .from("predictions")
+    .select(`
+        *,
+        profiles (
+            display_name
+        )
+    `);
 
     console.log("Games returned:", games);
     console.log("Games error:", gamesError);
@@ -149,12 +162,15 @@ async function loadPredictions() {
 
     const predictionMap = {};
 
-    predictions.forEach(function(prediction) {
+predictions.forEach(function(prediction) {
 
-        predictionMap[prediction.game_id] =
-            prediction;
+    if (!predictionMap[prediction.game_id]) {
+        predictionMap[prediction.game_id] = [];
+    }
 
-    });
+    predictionMap[prediction.game_id].push(prediction);
+
+});
 
 
     const container =
@@ -170,8 +186,13 @@ async function loadPredictions() {
 
     games.forEach(function(game) {
 
-        const prediction =
-            predictionMap[game.id];
+const gamePredictions =
+    predictionMap[game.id] || [];
+
+const myPrediction =
+    gamePredictions.find(function(prediction) {
+        return prediction.user_id === user.id;
+    });
 
 
         const card =
@@ -227,11 +248,11 @@ async function loadPredictions() {
             "probability-input";
 
 
-        if (prediction) {
+        if (myPrediction) {
 
             input.value =
                 Math.round(
-                    Number(prediction.probability) * 100
+                    Number(myPrediction.probability) * 100
                 );
 
         }
@@ -273,21 +294,38 @@ async function loadPredictions() {
 
         // Existing locked prediction
 
-        if (
-            prediction &&
-            prediction.user_locked
-        ) {
+// Locked prediction or game has started
 
-            input.disabled = true;
+const gameStarted =
+    new Date(game.tipoff_time) <= new Date();
 
-            saveButton.disabled = true;
+if (
+    myPrediction &&
+    myPrediction.user_locked
+) {
 
-            lockButton.disabled = true;
+    input.disabled = true;
 
-            status.textContent =
-                " 🔒 Locked";
+    saveButton.disabled = true;
 
-        }
+    lockButton.disabled = true;
+
+    status.textContent =
+        " 🔒 Locked";
+
+}
+else if (gameStarted) {
+
+    input.disabled = true;
+
+    saveButton.disabled = true;
+
+    lockButton.disabled = true;
+
+    status.textContent =
+        " 🔒 Game Started";
+
+}
 
 
         // Save prediction
@@ -325,6 +363,66 @@ async function loadPredictions() {
             }
         );
 
+const othersTitle =
+    document.createElement("p");
+
+othersTitle.textContent =
+    "Other predictions:";
+
+card.appendChild(othersTitle);
+
+
+const otherPredictions =
+    gamePredictions.filter(function(prediction) {
+
+        return prediction.user_id !== user.id;
+
+    });
+
+
+if (otherPredictions.length === 0) {
+
+    const noOthers =
+        document.createElement("p");
+
+    noOthers.textContent =
+        myPrediction && myPrediction.user_locked
+            ? "No other predictions yet."
+            : "🔒 Lock your prediction to see others.";
+
+    card.appendChild(noOthers);
+
+}
+else {
+
+    const list =
+        document.createElement("ul");
+
+    otherPredictions.forEach(function(prediction) {
+
+        const item =
+            document.createElement("li");
+
+        const name =
+            prediction.profiles
+                ? prediction.profiles.display_name
+                : "Contestant";
+
+        const probability =
+            Math.round(
+                Number(prediction.probability) * 100
+            );
+
+        item.textContent =
+            `${name}: ${probability}%`;
+
+        list.appendChild(item);
+
+    });
+
+    card.appendChild(list);
+
+}
 
         card.appendChild(saveButton);
 
@@ -488,24 +586,6 @@ async function lockPrediction(
 
 }
 
-
-// ------------------------------------------------------------
-// LOG OUT
-// ------------------------------------------------------------
-
-document
-    .getElementById("logout-button")
-    .addEventListener(
-        "click",
-        async function() {
-
-            await supabaseClient.auth.signOut();
-
-            window.location.href =
-                "index.html";
-
-        }
-    );
 
 
 // ------------------------------------------------------------

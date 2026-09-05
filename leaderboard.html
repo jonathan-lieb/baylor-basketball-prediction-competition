@@ -10,12 +10,14 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>My Predictions | Baylor Predictions</title>
+    <title>Leaderboard | Baylor Predictions</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
 
 </head>
-
 
 <body>
 
@@ -54,43 +56,27 @@
 </header>
 
 
-    <header class="site-header">
+<main class="page-container">
 
-        <div>
-            <h1>Baylor Predictions</h1>
-            <p id="welcome-message"></p>
+    <section class="card">
+
+        <h1>Competition Leaderboard</h1>
+
+        <p>
+            Rankings based on Brier-score performance.
+        </p>
+
+        <div id="leaderboard-container">
+
+            <p>Loading leaderboard...</p>
+
         </div>
 
-        <button id="logout-button" class="button">
-            Log Out
-        </button>
+    </section>
 
-    </header>
+</main>
 
 
-    <main class="page-container">
-
-        <section class="card">
-
-            <h2>My Predictions</h2>
-
-            <p>
-                Enter Baylor's probability of winning each game.
-                You can change your prediction until you lock it
-                or the game begins.
-            </p>
-
-            <div id="predictions-container">
-
-                <p>Loading games...</p>
-
-            </div>
-
-        </section>
-
-    </main>
-
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/config.js"></script>
     <script src="js/navigation.js"></script>

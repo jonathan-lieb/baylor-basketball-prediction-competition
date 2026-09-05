@@ -333,3 +333,71 @@ button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.site-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.site-brand a {
+    text-decoration: none;
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.site-nav a {
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.site-nav a.active {
+    font-weight: bold;
+}
+
+@media (max-width: 800px) {
+
+    .site-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .site-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+}
+
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.leaderboard-table th {
+    font-weight: bold;
+}
+
+.game-score {
+    font-size: 1.25rem;
+    font-weight: bold;
+}

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Baylor Results | Baylor Predictions</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+</head>
+
+<body>
+
+    <header class="site-header">
+
+        <div class="site-brand">
+
+            <a href="dashboard.html">
+                Baylor Predictions
+            </a>
+
+        </div>
+
+        <nav class="site-nav">
+
+            <a href="dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="predictions.html">
+                My Predictions
+            </a>
+
+            <a href="results.html">
+                Baylor Results
+            </a>
+
+            <a href="leaderboard.html">
+                Leaderboard
+            </a>
+
+            <button
+                id="logout-button"
+                class="button"
+            >
+                Log Out
+            </button>
+
+        </nav>
+
+    </header>
+
+
+    <main class="page-container">
+
+        <section class="card">
+
+            <h1>Baylor Results</h1>
+
+            <p>
+                Results and prediction performance for every Baylor game.
+            </p>
+
+            <div id="results-container">
+
+                <p>
+                    Loading results...
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="js/config.js"></script>
+
+    <script src="js/navigation.js"></script>
+
+    <script src="js/results.js"></script>
+
+</body>
+
+</html>
