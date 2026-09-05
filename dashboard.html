@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Dashboard | Baylor Predictions</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+
+
+<body>
+
+
+    <header class="navbar">
+
+        <div class="navbar-title">
+            Baylor Predictions
+        </div>
+
+
+        <nav>
+
+            <a href="dashboard.html">
+                Dashboard
+            </a>
+
+            <a href="#">
+                My Predictions
+            </a>
+
+            <a href="#">
+                Results
+            </a>
+
+            <a href="#">
+                Leaderboard
+            </a>
+
+            <button id="logout-button">
+                Log Out
+            </button>
+
+        </nav>
+
+    </header>
+
+
+    <main class="dashboard">
+
+        <section class="card">
+
+            <h1>
+                Welcome, <span id="display-name"></span>!
+            </h1>
+
+            <p>
+                Welcome to the Baylor Basketball Prediction Contest.
+            </p>
+
+
+            <div class="dashboard-grid">
+
+                <div class="dashboard-item">
+
+                    <h3>
+                        My Predictions
+                    </h3>
+
+                    <p>
+                        Enter and manage your win probabilities.
+                    </p>
+
+                    <a href="#" class="button">
+                        View Predictions
+                    </a>
+
+                </div>
+
+
+                <div class="dashboard-item">
+
+                    <h3>
+                        Baylor Results
+                    </h3>
+
+                    <p>
+                        See Baylor's results and prediction history.
+                    </p>
+
+                    <a href="#" class="button">
+                        View Results
+                    </a>
+
+                </div>
+
+
+                <div class="dashboard-item">
+
+                    <h3>
+                        Leaderboard
+                    </h3>
+
+                    <p>
+                        See how you compare with everyone else.
+                    </p>
+
+                    <a href="#" class="button">
+                        View Leaderboard
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
+
+    <script src="js/config.js"></script>
+
+    <script src="js/dashboard.js"></script>
+
+</body>
+
+</html>
