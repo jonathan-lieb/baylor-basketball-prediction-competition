@@ -11,23 +11,24 @@ async function loadLeaderboard() {
     }
 
     const container =
-        document.getElementById(
-            "leaderboard-container"
-        );
+        document.getElementById("leaderboard-container");
 
+
+    // --------------------------------------------------------
+    // GET LEADERBOARD
+    // --------------------------------------------------------
 
     const {
-        data: profiles,
+        data: leaderboard,
         error
     } = await supabaseClient
-        .from("profiles")
-        .select("id, display_name")
-        .order("display_name");
+        .from("leaderboard")
+        .select("*");
 
 
     if (error) {
 
-        console.error(error);
+        console.error("Leaderboard error:", error);
 
         container.textContent =
             `Unable to load leaderboard: ${error.message}`;
@@ -36,14 +37,22 @@ async function loadLeaderboard() {
     }
 
 
-    if (!profiles || profiles.length === 0) {
+    // --------------------------------------------------------
+    // NO SCORES YET
+    // --------------------------------------------------------
+
+    if (!leaderboard || leaderboard.length === 0) {
 
         container.innerHTML =
-            "<p>No contestants yet.</p>";
+            "<p>No completed games have been scored yet.</p>";
 
         return;
     }
 
+
+    // --------------------------------------------------------
+    // CREATE TABLE
+    // --------------------------------------------------------
 
     const table =
         document.createElement("table");
@@ -61,6 +70,7 @@ async function loadLeaderboard() {
                 <th>Games</th>
             </tr>
         </thead>
+
         <tbody></tbody>
     `;
 
@@ -69,17 +79,23 @@ async function loadLeaderboard() {
         table.querySelector("tbody");
 
 
-    profiles.forEach(function(profile, index) {
+    // --------------------------------------------------------
+    // ADD CONTESTANTS
+    // --------------------------------------------------------
+
+    leaderboard.forEach(function(entry, index) {
 
         const row =
             document.createElement("tr");
 
+
         row.innerHTML = `
             <td>${index + 1}</td>
-            <td>${profile.display_name}</td>
-            <td>—</td>
-            <td>—</td>
+            <td>${entry.display_name}</td>
+            <td>${Number(entry.total_points).toFixed(2)}</td>
+            <td>${entry.games}</td>
         `;
+
 
         tbody.appendChild(row);
 
@@ -89,7 +105,6 @@ async function loadLeaderboard() {
     container.innerHTML = "";
 
     container.appendChild(table);
-
 }
 
 
