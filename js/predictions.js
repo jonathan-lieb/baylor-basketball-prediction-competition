@@ -105,18 +105,18 @@ async function loadPredictions() {
             ascending: true
         });
 
-
+    
     if (gamesError) {
 
-        console.error(gamesError);
+    console.error("Games error:", gamesError);
 
-        document.getElementById(
-            "predictions-container"
-        ).textContent =
-            "Unable to load games.";
+    document.getElementById(
+        "predictions-container"
+    ).textContent =
+        `Unable to load games: ${gamesError.message}`;
 
-        return;
-    }
+    return;
+}
 
 
     // Get user's predictions
@@ -129,6 +129,8 @@ async function loadPredictions() {
         .select("*")
         .eq("user_id", user.id);
 
+    console.log("Games returned:", games);
+    console.log("Games error:", gamesError);
 
     if (predictionsError) {
 
