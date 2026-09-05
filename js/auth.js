@@ -56,12 +56,12 @@ if (signupForm) {
             password: password,
 
             options: {
-
-                data: {
-                    display_name: displayName
-                }
-
-            }
+    data: {
+        display_name: displayName
+    },
+    emailRedirectTo:
+        "https://jonathan-lieb.github.io/baylor-basketball-prediction-competition/dashboard.html"
+}
 
         });
 
