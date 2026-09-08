@@ -25,14 +25,14 @@ async function getCurrentUser() {
 
 function formatGameDate(dateString) {
 
-    const date = new Date(dateString);
+    const date = new Date(dateString + "T00:00:00");
 
     return date.toLocaleDateString(
         undefined,
         {
-            weekday: "short",
             month: "short",
-            day: "numeric"
+            day: "numeric",
+            year: "numeric"
         }
     );
 }
@@ -44,9 +44,11 @@ function formatGameDate(dateString) {
 
 function formatGameTime(dateString) {
 
-    const date = new Date(dateString);
+    if (!dateString) {
+        return "Time TBD";
+    }
 
-    return date.toLocaleTimeString(
+    return new Date(dateString).toLocaleTimeString(
         undefined,
         {
             hour: "numeric",
@@ -54,7 +56,6 @@ function formatGameTime(dateString) {
         }
     );
 }
-
 
 // ------------------------------------------------------------
 // LOAD PREDICTIONS
@@ -211,7 +212,7 @@ const myPrediction =
             document.createElement("p");
 
         date.textContent =
-            `${formatGameDate(game.tipoff_time)} • ` +
+            `${formatGameDate(game.game_date)} • ` +
             `${formatGameTime(game.tipoff_time)} • ` +
             `${game.location}`;
 
@@ -293,6 +294,7 @@ const myPrediction =
 // Locked prediction or game has started
 
 const gameStarted =
+    game.tipoff_time &&
     new Date(game.tipoff_time) <= new Date();
 
 if (
