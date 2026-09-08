@@ -5,10 +5,11 @@
 async function getCurrentUser() {
 
     const {
-        data: { user }
+        data: { user },
+        error
     } = await supabaseClient.auth.getUser();
 
-    if (!user) {
+    if (error || !user) {
 
         window.location.href = "login.html";
 
@@ -57,6 +58,7 @@ function formatGameTime(dateString) {
     );
 }
 
+
 // ------------------------------------------------------------
 // LOAD PREDICTIONS
 // ------------------------------------------------------------
@@ -68,42 +70,31 @@ async function loadPredictions() {
     if (!user) {
         return;
     }
-    
+
+
+    // --------------------------------------------------------
     // Automatically lock predictions for games that have started
-const { error: autoLockError } = await supabaseClient.rpc(
-    "auto_lock_started_predictions"
-);
-
-if (autoLockError) {
-    console.error("Automatic lock error:", autoLockError);
-}
-
-
-    const welcomeMessage =
-        document.getElementById("welcome-message");
-
-
-    // Get profile
+    // --------------------------------------------------------
 
     const {
-        data: profile,
-        error: profileError
-    } = await supabaseClient
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user.id)
-        .single();
+        error: autoLockError
+    } = await supabaseClient.rpc(
+        "auto_lock_started_predictions"
+    );
 
+    if (autoLockError) {
 
-    if (!profileError && profile) {
-
-        welcomeMessage.textContent =
-            `Welcome, ${profile.display_name}`;
+        console.error(
+            "Automatic lock error:",
+            autoLockError
+        );
 
     }
 
 
+    // --------------------------------------------------------
     // Get games
+    // --------------------------------------------------------
 
     const {
         data: games,
@@ -111,64 +102,84 @@ if (autoLockError) {
     } = await supabaseClient
         .from("games")
         .select("*")
-        .order("tipoff_time", {
+        .order("game_date", {
             ascending: true
         });
 
-    
+
     if (gamesError) {
 
-    console.error("Games error:", gamesError);
-
-    document.getElementById(
-        "predictions-container"
-    ).textContent =
-        `Unable to load games: ${gamesError.message}`;
-
-    return;
-}
-
-
-    // Get user's predictions
-
-const {
-    data: predictions,
-    error: predictionsError
-} = await supabaseClient
-    .from("predictions")
-    .select("*")
-    .eq("user_id", user.id);
-
-    console.log("Games returned:", games);
-    console.log("Games error:", gamesError);
-
-    if (predictionsError) {
-
-        console.error(predictionsError);
+        console.error(
+            "Games error:",
+            gamesError
+        );
 
         document.getElementById(
             "predictions-container"
         ).textContent =
-            "Unable to load predictions.";
+            `Unable to load games: ${gamesError.message}`;
 
         return;
     }
 
 
+    // --------------------------------------------------------
+    // Get user's predictions
+    // --------------------------------------------------------
+
+    const {
+        data: predictions,
+        error: predictionsError
+    } = await supabaseClient
+        .from("predictions")
+        .select("*")
+        .eq("user_id", user.id);
+
+
+    if (predictionsError) {
+
+        console.error(
+            "Predictions error:",
+            predictionsError
+        );
+
+        document.getElementById(
+            "predictions-container"
+        ).textContent =
+            `Unable to load predictions: ${predictionsError.message}`;
+
+        return;
+    }
+
+
+    console.log("Games returned:", games);
+    console.log("Predictions returned:", predictions);
+
+
+    // --------------------------------------------------------
     // Turn predictions into a lookup object
+    // --------------------------------------------------------
 
     const predictionMap = {};
 
-predictions.forEach(function(prediction) {
+    predictions.forEach(function(prediction) {
 
-    if (!predictionMap[prediction.game_id]) {
-        predictionMap[prediction.game_id] = [];
-    }
+        if (!predictionMap[prediction.game_id]) {
 
-    predictionMap[prediction.game_id].push(prediction);
+            predictionMap[prediction.game_id] = [];
 
-});
+        }
 
+        predictionMap[prediction.game_id].push(
+            prediction
+        );
+
+    });
+
+
+    // --------------------------------------------------------
+    // Get page container
+    // --------------------------------------------------------
 
     const container =
         document.getElementById(
@@ -179,18 +190,27 @@ predictions.forEach(function(prediction) {
     container.innerHTML = "";
 
 
+    // --------------------------------------------------------
     // Create a card for every game
+    // --------------------------------------------------------
 
     games.forEach(function(game) {
 
-const gamePredictions =
-    predictionMap[game.id] || [];
+        const gamePredictions =
+            predictionMap[game.id] || [];
 
-const myPrediction =
-    gamePredictions.find(function(prediction) {
-        return prediction.user_id === user.id;
-    });
 
+        const myPrediction =
+            gamePredictions.find(function(prediction) {
+
+                return prediction.user_id === user.id;
+
+            });
+
+
+        // ----------------------------------------------------
+        // Game card
+        // ----------------------------------------------------
 
         const card =
             document.createElement("div");
@@ -198,6 +218,10 @@ const myPrediction =
         card.className =
             "game-card";
 
+
+        // ----------------------------------------------------
+        // Game title
+        // ----------------------------------------------------
 
         const title =
             document.createElement("h3");
@@ -207,6 +231,10 @@ const myPrediction =
 
         card.appendChild(title);
 
+
+        // ----------------------------------------------------
+        // Date / time / location
+        // ----------------------------------------------------
 
         const date =
             document.createElement("p");
@@ -219,7 +247,9 @@ const myPrediction =
         card.appendChild(date);
 
 
-        // Probability input
+        // ----------------------------------------------------
+        // Probability label
+        // ----------------------------------------------------
 
         const label =
             document.createElement("label");
@@ -229,6 +259,10 @@ const myPrediction =
 
         card.appendChild(label);
 
+
+        // ----------------------------------------------------
+        // Probability input
+        // ----------------------------------------------------
 
         const input =
             document.createElement("input");
@@ -258,7 +292,9 @@ const myPrediction =
         card.appendChild(input);
 
 
+        // ----------------------------------------------------
         // Save button
+        // ----------------------------------------------------
 
         const saveButton =
             document.createElement("button");
@@ -270,7 +306,9 @@ const myPrediction =
             "button";
 
 
+        // ----------------------------------------------------
         // Lock button
+        // ----------------------------------------------------
 
         const lockButton =
             document.createElement("button");
@@ -282,6 +320,10 @@ const myPrediction =
             "button";
 
 
+        // ----------------------------------------------------
+        // Status message
+        // ----------------------------------------------------
+
         const status =
             document.createElement("span");
 
@@ -289,44 +331,57 @@ const myPrediction =
             "prediction-status";
 
 
+        // ----------------------------------------------------
+        // Determine whether game has started
+        // ----------------------------------------------------
+
+        const gameStarted =
+            game.tipoff_time &&
+            new Date(game.tipoff_time) <= new Date();
+
+
+        // ----------------------------------------------------
         // Existing locked prediction
+        // ----------------------------------------------------
 
-// Locked prediction or game has started
+        if (
+            myPrediction &&
+            myPrediction.user_locked
+        ) {
 
-const gameStarted =
-    game.tipoff_time &&
-    new Date(game.tipoff_time) <= new Date();
+            input.disabled = true;
 
-if (
-    myPrediction &&
-    myPrediction.user_locked
-) {
+            saveButton.disabled = true;
 
-    input.disabled = true;
+            lockButton.disabled = true;
 
-    saveButton.disabled = true;
+            status.textContent =
+                " 🔒 Locked";
 
-    lockButton.disabled = true;
-
-    status.textContent =
-        " 🔒 Locked";
-
-}
-else if (gameStarted) {
-
-    input.disabled = true;
-
-    saveButton.disabled = true;
-
-    lockButton.disabled = true;
-
-    status.textContent =
-        " 🔒 Game Started";
-
-}
+        }
 
 
+        // ----------------------------------------------------
+        // Game has started
+        // ----------------------------------------------------
+
+        else if (gameStarted) {
+
+            input.disabled = true;
+
+            saveButton.disabled = true;
+
+            lockButton.disabled = true;
+
+            status.textContent =
+                " 🔒 Game Started";
+
+        }
+
+
+        // ----------------------------------------------------
         // Save prediction
+        // ----------------------------------------------------
 
         saveButton.addEventListener(
             "click",
@@ -343,7 +398,9 @@ else if (gameStarted) {
         );
 
 
+        // ----------------------------------------------------
         // Lock prediction
+        // ----------------------------------------------------
 
         lockButton.addEventListener(
             "click",
@@ -361,66 +418,88 @@ else if (gameStarted) {
             }
         );
 
-const othersTitle =
-    document.createElement("p");
 
-othersTitle.textContent =
-    "Other predictions:";
+        // ----------------------------------------------------
+        // Other predictions
+        // ----------------------------------------------------
 
-card.appendChild(othersTitle);
+        const othersTitle =
+            document.createElement("p");
 
+        othersTitle.textContent =
+            "Other predictions:";
 
-const otherPredictions =
-    gamePredictions.filter(function(prediction) {
-
-        return prediction.user_id !== user.id;
-
-    });
+        card.appendChild(othersTitle);
 
 
-if (otherPredictions.length === 0) {
+        const otherPredictions =
+            gamePredictions.filter(function(prediction) {
 
-    const noOthers =
-        document.createElement("p");
+                return prediction.user_id !== user.id;
 
-    noOthers.textContent =
-        myPrediction && myPrediction.user_locked
-            ? "No other predictions yet."
-            : "🔒 Lock your prediction to see others.";
+            });
 
-    card.appendChild(noOthers);
 
-}
-else {
+        if (otherPredictions.length === 0) {
 
-    const list =
-        document.createElement("ul");
+            const noOthers =
+                document.createElement("p");
 
-    otherPredictions.forEach(function(prediction) {
+            noOthers.textContent =
+                myPrediction && myPrediction.user_locked
+                    ? "No other predictions yet."
+                    : "🔒 Lock your prediction to see others.";
 
-        const item =
-            document.createElement("li");
+            card.appendChild(noOthers);
 
-        const name =
-            prediction.profiles
-                ? prediction.profiles.display_name
-                : "Contestant";
+        }
 
-        const probability =
-            Math.round(
-                Number(prediction.probability) * 100
+
+        else {
+
+            const list =
+                document.createElement("ul");
+
+
+            otherPredictions.forEach(
+                function(prediction) {
+
+                    const item =
+                        document.createElement("li");
+
+
+                    const name =
+                        prediction.profiles
+                            ? prediction.profiles.display_name
+                            : "Contestant";
+
+
+                    const probability =
+                        Math.round(
+                            Number(
+                                prediction.probability
+                            ) * 100
+                        );
+
+
+                    item.textContent =
+                        `${name}: ${probability}%`;
+
+
+                    list.appendChild(item);
+
+                }
             );
 
-        item.textContent =
-            `${name}: ${probability}%`;
 
-        list.appendChild(item);
+            card.appendChild(list);
 
-    });
+        }
 
-    card.appendChild(list);
 
-}
+        // ----------------------------------------------------
+        // Add controls to card
+        // ----------------------------------------------------
 
         card.appendChild(saveButton);
 
@@ -428,6 +507,10 @@ else {
 
         card.appendChild(status);
 
+
+        // ----------------------------------------------------
+        // Add card to page
+        // ----------------------------------------------------
 
         container.appendChild(card);
 
@@ -536,7 +619,9 @@ async function lockPrediction(
         percentage / 100;
 
 
-    // First create/update the prediction
+    // --------------------------------------------------------
+    // Create/update prediction and lock it
+    // --------------------------------------------------------
 
     const {
         data,
@@ -570,7 +655,9 @@ async function lockPrediction(
     }
 
 
+    // --------------------------------------------------------
     // Disable controls
+    // --------------------------------------------------------
 
     input.disabled = true;
 
@@ -585,11 +672,8 @@ async function lockPrediction(
 }
 
 
-
 // ------------------------------------------------------------
 // START
 // ------------------------------------------------------------
 
 loadPredictions();
-
-

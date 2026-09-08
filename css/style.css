@@ -401,3 +401,71 @@ button:disabled {
     font-size: 1.25rem;
     font-weight: bold;
 }
+
+/* ------------------------------------------------------------
+   SITE HEADER
+------------------------------------------------------------ */
+
+.site-header {
+    background: #154734;
+    color: white;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 18px 30px;
+
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.site-brand a {
+    color: white;
+    text-decoration: none;
+
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.site-nav a {
+    color: white;
+    text-decoration: none;
+
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.site-nav a:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.site-nav a.active {
+    background: rgba(255, 255, 255, 0.18);
+    font-weight: bold;
+}
+
+.site-nav .button {
+    margin-left: 8px;
+}
+
+
+@media (max-width: 800px) {
+
+    .site-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .site-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+}
