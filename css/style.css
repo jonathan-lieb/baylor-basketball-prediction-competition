@@ -365,7 +365,7 @@ button:disabled {
     font-weight: bold;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
 
     .site-header {
         flex-direction: column;
@@ -456,7 +456,7 @@ button:disabled {
 }
 
 
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
 
     .site-header {
         flex-direction: column;
