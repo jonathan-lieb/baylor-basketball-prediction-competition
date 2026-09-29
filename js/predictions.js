@@ -607,8 +607,6 @@ function setupCsvTools(games, predictions, user) {
     }
 );
 
-    }
-
 }
 
 function downloadPredictionsCsv(
