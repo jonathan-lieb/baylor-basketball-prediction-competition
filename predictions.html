@@ -64,11 +64,37 @@
                 or the game begins.
             </p>
 
-            <div id="predictions-container">
+<div class="prediction-tools">
 
-                <p>Loading games...</p>
+    <button
+        id="download-csv-button"
+        class="button"
+        type="button"
+    >
+        Download Predictions CSV
+    </button>
 
-            </div>
+    <label
+        for="csv-file-input"
+        class="button"
+    >
+        Upload Predictions CSV
+    </label>
+
+    <input
+        type="file"
+        id="csv-file-input"
+        accept=".csv"
+        hidden
+    >
+
+</div>
+
+<div id="csv-status"></div>
+
+<div id="predictions-container">
+    <p>Loading games...</p>
+</div>
 
         </section>
 

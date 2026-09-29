@@ -176,6 +176,7 @@ async function loadPredictions() {
     console.log("Games returned:", games);
     console.log("Predictions returned:", predictions);
 
+    setupCsvTools(games, predictions, user);
 
     // --------------------------------------------------------
     // Turn predictions into a lookup object
@@ -545,6 +546,183 @@ card.appendChild(percentSymbol);
         container.appendChild(card);
 
     });
+
+}
+
+// ------------------------------------------------------------
+// CSV TOOLS
+// ------------------------------------------------------------
+
+function setupCsvTools(games, predictions, user) {
+
+    const downloadButton =
+        document.getElementById(
+            "download-csv-button"
+        );
+
+    const fileInput =
+        document.getElementById(
+            "csv-file-input"
+        );
+
+
+    if (downloadButton) {
+
+        downloadButton.addEventListener(
+            "click",
+            function() {
+
+                downloadPredictionsCsv(
+                    games,
+                    predictions
+                );
+
+            }
+        );
+
+    }
+
+
+    if (fileInput) {
+
+        fileInput.addEventListener(
+            "change",
+            async function(event) {
+
+                const file =
+                    event.target.files[0];
+
+                if (!file) {
+                    return;
+                }
+
+                await uploadPredictionsCsv(
+                    file,
+                    games,
+                    user
+                );
+
+                fileInput.value = "";
+
+            }
+        );
+
+    }
+
+}
+
+function downloadPredictionsCsv(
+    games,
+    predictions
+) {
+
+    const predictionMap = {};
+
+    predictions.forEach(function(prediction) {
+
+        predictionMap[prediction.game_id] =
+            prediction;
+
+    });
+
+
+    const rows = [];
+
+
+    rows.push([
+        "game_id",
+        "game_date",
+        "opponent",
+        "location",
+        "probability"
+    ]);
+
+
+    games.forEach(function(game) {
+
+        const prediction =
+            predictionMap[game.id];
+
+
+        const probability =
+            prediction
+                ? Number(prediction.probability)
+                : 0.5;
+
+
+        rows.push([
+            game.id,
+            game.game_date,
+            game.opponent,
+            game.location,
+            probability.toFixed(4)
+        ]);
+
+    });
+
+
+    const csv =
+        rows
+            .map(function(row) {
+
+                return row
+                    .map(function(value) {
+
+                        const text =
+                            String(value);
+
+                        if (
+                            text.includes(",") ||
+                            text.includes('"') ||
+                            text.includes("\n")
+                        ) {
+
+                            return '"' +
+                                text.replace(
+                                    /"/g,
+                                    '""'
+                                ) +
+                                '"';
+
+                        }
+
+                        return text;
+
+                    })
+                    .join(",");
+
+            })
+            .join("\n");
+
+
+    const blob =
+        new Blob(
+            [csv],
+            {
+                type: "text/csv;charset=utf-8;"
+            }
+        );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const link =
+        document.createElement("a");
+
+    link.href = url;
+
+    link.download =
+        "baylor_predictions.csv";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
 
 }
 

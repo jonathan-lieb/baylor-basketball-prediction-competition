@@ -474,3 +474,15 @@ button:disabled {
     margin-left: 5px;
     font-weight: bold;
 }
+
+.prediction-tools {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+
+#csv-status {
+    margin-bottom: 15px;
+    font-weight: bold;
+}
