@@ -469,3 +469,8 @@ button:disabled {
     }
 
 }
+
+.probability-percent {
+    margin-left: 5px;
+    font-weight: bold;
+}

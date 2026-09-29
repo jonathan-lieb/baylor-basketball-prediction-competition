@@ -73,6 +73,27 @@ async function loadPredictions() {
 
 
     // --------------------------------------------------------
+    // Initialize missing predictions at 0.5
+    // --------------------------------------------------------
+
+    const {
+        error: initializeError
+    } = await supabaseClient.rpc(
+        "initialize_my_predictions"
+    );
+
+    if (initializeError) {
+
+        console.error(
+            "Prediction initialization error:",
+            initializeError
+        );
+
+    }
+
+
+
+    // --------------------------------------------------------
     // Automatically lock predictions for games that have started
     // --------------------------------------------------------
 
@@ -289,7 +310,16 @@ async function loadPredictions() {
         }
 
 
-        card.appendChild(input);
+        const percentSymbol =
+    document.createElement("span");
+
+percentSymbol.textContent = "%";
+
+percentSymbol.className =
+    "probability-percent";
+
+card.appendChild(input);
+card.appendChild(percentSymbol);
 
 
         // ----------------------------------------------------
