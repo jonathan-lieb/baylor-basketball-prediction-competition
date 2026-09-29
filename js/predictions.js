@@ -582,30 +582,30 @@ function setupCsvTools(games, predictions, user) {
 
     }
 
+    fileInput.addEventListener(
+    "change",
+    async function(event) {
 
-    if (fileInput) {
+        const file =
+            event.target.files[0];
 
-        fileInput.addEventListener(
-            "change",
-            async function(event) {
+        console.log("CSV file selected:", file);
 
-                const file =
-                    event.target.files[0];
+        if (!file) {
+            return;
+        }
 
-                if (!file) {
-                    return;
-                }
-
-                await uploadPredictionsCsv(
-                    file,
-                    games,
-                    user
-                );
-
-                fileInput.value = "";
-
-            }
+        await uploadPredictionsCsv(
+            file,
+            games,
+            user
         );
+        
+
+        fileInput.value = "";
+
+    }
+);
 
     }
 
@@ -735,6 +735,11 @@ async function uploadPredictionsCsv(
     games,
     user
 ) {
+  
+          console.log(
+    "Starting CSV upload:",
+    file.name
+);
 
     const status =
         document.getElementById("csv-status");
