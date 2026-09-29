@@ -731,6 +731,39 @@ function downloadPredictionsCsv(
 
 }
 
+function normalizeCsvDate(dateString) {
+
+    const trimmed =
+        dateString.trim();
+
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+    }
+
+    // Excel-style M/D/YYYY or MM/DD/YYYY
+    const parts =
+        trimmed.split("/");
+
+    if (parts.length === 3) {
+
+        const month =
+            parts[0].padStart(2, "0");
+
+        const day =
+            parts[1].padStart(2, "0");
+
+        const year =
+            parts[2];
+
+        if (/^\d{4}$/.test(year)) {
+            return `${year}-${month}-${day}`;
+        }
+    }
+
+    return trimmed;
+}
+
 // ------------------------------------------------------------
 // CSV UPLOAD
 // ------------------------------------------------------------
@@ -939,6 +972,7 @@ const databaseOpponent =
 
 const databaseLocation =
     String(game.location).trim();
+
 
 if (
     databaseDate !== gameDate ||
