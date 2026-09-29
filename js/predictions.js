@@ -931,17 +931,40 @@ async function uploadPredictionsCsv(
         // Verify game information
         // ----------------------------------------------------
 
-        if (
-            game.game_date !== gameDate ||
-            game.opponent !== opponent ||
-            game.location !== location
-        ) {
+        const databaseDate =
+    String(game.game_date).trim();
 
-            status.textContent =
-                `Game information for ${game.opponent} does not match the database.`;
+const databaseOpponent =
+    String(game.opponent).trim();
 
-            return;
-        }
+const databaseLocation =
+    String(game.location).trim();
+
+if (
+    databaseDate !== gameDate ||
+    databaseOpponent !== opponent ||
+    databaseLocation !== location
+) {
+
+    console.log("CSV game information:", {
+        gameId: gameId,
+        gameDate: gameDate,
+        opponent: opponent,
+        location: location
+    });
+
+    console.log("Database game information:", {
+        gameId: gameId,
+        gameDate: databaseDate,
+        opponent: databaseOpponent,
+        location: databaseLocation
+    });
+
+    status.textContent =
+        `Game information for ${game.opponent} does not match the database.`;
+
+    return;
+}
 
 
         // ----------------------------------------------------
