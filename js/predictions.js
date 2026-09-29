@@ -974,10 +974,13 @@ const databaseLocation =
     String(game.location).trim();
 
 
+const normalizedGameDate =
+    normalizeCsvDate(gameDate);
+
 if (
-    databaseDate !== gameDate ||
-    databaseOpponent !== opponent ||
-    databaseLocation !== location
+    game.game_date !== normalizedGameDate ||
+    game.opponent !== opponent ||
+    game.location !== location
 ) {
 
     console.log("CSV game information:", {
