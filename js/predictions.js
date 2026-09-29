@@ -957,45 +957,30 @@ async function uploadPredictionsCsv(
 
 
         const game =
-            gameMap[gameId];
-
-
-        // ----------------------------------------------------
-        // Verify game information
-        // ----------------------------------------------------
-
-        const databaseDate =
-    String(game.game_date).trim();
-
-const databaseOpponent =
-    String(game.opponent).trim();
-
-const databaseLocation =
-    String(game.location).trim();
-
+    gameMap[gameId];
 
 const normalizedGameDate =
     normalizeCsvDate(gameDate);
 
+console.log("Checking game:", {
+    gameId: gameId,
+    csvDate: gameDate,
+    normalizedCsvDate: normalizedGameDate,
+    databaseDate: game.game_date,
+    csvOpponent: opponent,
+    databaseOpponent: game.opponent,
+    csvLocation: location,
+    databaseLocation: game.location
+});
+
 if (
-    game.game_date !== normalizedGameDate ||
-    game.opponent !== opponent ||
-    game.location !== location
+    String(game.game_date).trim() !==
+        String(normalizedGameDate).trim() ||
+    String(game.opponent).trim() !==
+        String(opponent).trim() ||
+    String(game.location).trim() !==
+        String(location).trim()
 ) {
-
-    console.log("CSV game information:", {
-        gameId: gameId,
-        gameDate: gameDate,
-        opponent: opponent,
-        location: location
-    });
-
-    console.log("Database game information:", {
-        gameId: gameId,
-        gameDate: databaseDate,
-        opponent: databaseOpponent,
-        location: databaseLocation
-    });
 
     status.textContent =
         `Game information for ${game.opponent} does not match the database.`;
