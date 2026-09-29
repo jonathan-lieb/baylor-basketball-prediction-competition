@@ -726,6 +726,448 @@ function downloadPredictionsCsv(
 
 }
 
+// ------------------------------------------------------------
+// CSV UPLOAD
+// ------------------------------------------------------------
+
+async function uploadPredictionsCsv(
+    file,
+    games,
+    user
+) {
+
+    const status =
+        document.getElementById("csv-status");
+
+
+    status.textContent =
+        "Reading CSV...";
+
+
+    // --------------------------------------------------------
+    // Read file
+    // --------------------------------------------------------
+
+    let text;
+
+    try {
+
+        text =
+            await file.text();
+
+    } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+            "Unable to read CSV file.";
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Parse CSV
+    // --------------------------------------------------------
+
+    const lines =
+        text
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .split("\n")
+            .filter(function(line) {
+
+                return line.trim() !== "";
+
+            });
+
+
+    if (lines.length < 2) {
+
+        status.textContent =
+            "CSV file does not contain any predictions.";
+
+        return;
+    }
+
+
+    const headers =
+        parseCsvLine(lines[0]);
+
+
+    const expectedHeaders = [
+        "game_id",
+        "game_date",
+        "opponent",
+        "location",
+        "probability"
+    ];
+
+
+    const headersMatch =
+        expectedHeaders.every(function(header, index) {
+
+            return headers[index] === header;
+
+        });
+
+
+    if (
+        !headersMatch ||
+        headers.length !== expectedHeaders.length
+    ) {
+
+        status.textContent =
+            "Invalid CSV format. Please use the downloaded predictions CSV.";
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Build game lookup
+    // --------------------------------------------------------
+
+    const gameMap = {};
+
+    games.forEach(function(game) {
+
+        gameMap[String(game.id)] =
+            game;
+
+    });
+
+
+    // --------------------------------------------------------
+    // Parse rows
+    // --------------------------------------------------------
+
+    const uploadedRows = [];
+
+    const seenGameIds = {};
+
+
+    for (
+        let i = 1;
+        i < lines.length;
+        i++
+    ) {
+
+        const values =
+            parseCsvLine(lines[i]);
+
+
+        if (values.length !== 5) {
+
+            status.textContent =
+                `Invalid CSV row ${i + 1}.`;
+
+            return;
+        }
+
+
+        const gameId =
+            values[0].trim();
+
+        const gameDate =
+            values[1].trim();
+
+        const opponent =
+            values[2].trim();
+
+        const location =
+            values[3].trim();
+
+        const probability =
+            Number(
+                values[4].trim()
+            );
+
+
+        // ----------------------------------------------------
+        // Check game ID
+        // ----------------------------------------------------
+
+        if (!gameMap[gameId]) {
+
+            status.textContent =
+                `Game ID ${gameId} is not a valid game.`;
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // Prevent duplicate games
+        // ----------------------------------------------------
+
+        if (seenGameIds[gameId]) {
+
+            status.textContent =
+                `Game ID ${gameId} appears more than once.`;
+
+            return;
+        }
+
+
+        seenGameIds[gameId] = true;
+
+
+        const game =
+            gameMap[gameId];
+
+
+        // ----------------------------------------------------
+        // Verify game information
+        // ----------------------------------------------------
+
+        if (
+            game.game_date !== gameDate ||
+            game.opponent !== opponent ||
+            game.location !== location
+        ) {
+
+            status.textContent =
+                `Game information for ${game.opponent} does not match the database.`;
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // Validate probability
+        // ----------------------------------------------------
+
+        if (
+            Number.isNaN(probability) ||
+            probability < 0 ||
+            probability > 1
+        ) {
+
+            status.textContent =
+                `Invalid probability for ${game.opponent}. Use a value between 0 and 1.`;
+
+            return;
+        }
+
+
+        uploadedRows.push({
+            game: game,
+            probability: probability
+        });
+
+    }
+
+
+    // --------------------------------------------------------
+    // Upload predictions
+    // --------------------------------------------------------
+
+    let updatedCount = 0;
+
+
+    for (const row of uploadedRows) {
+
+        const game =
+            row.game;
+
+        const probability =
+            row.probability;
+
+
+        // ----------------------------------------------------
+        // Check whether game has started
+        // ----------------------------------------------------
+
+        const gameStarted =
+            game.tipoff_time &&
+            new Date(game.tipoff_time) <= new Date();
+
+
+        if (gameStarted) {
+
+            console.warn(
+                `Skipping ${game.opponent}: game has started.`
+            );
+
+            continue;
+        }
+
+
+        // ----------------------------------------------------
+        // Check current prediction
+        // ----------------------------------------------------
+
+        const {
+            data: existingPrediction,
+            error: existingError
+        } = await supabaseClient
+            .from("predictions")
+            .select(
+                "id,user_locked"
+            )
+            .eq("user_id", user.id)
+            .eq("game_id", game.id)
+            .maybeSingle();
+
+
+        if (existingError) {
+
+            console.error(
+                existingError
+            );
+
+            status.textContent =
+                `Unable to check ${game.opponent}.`;
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // Don't modify locked predictions
+        // ----------------------------------------------------
+
+        if (
+            existingPrediction &&
+            existingPrediction.user_locked
+        ) {
+
+            console.warn(
+                `Skipping ${game.opponent}: prediction is locked.`
+            );
+
+            continue;
+        }
+
+
+        // ----------------------------------------------------
+        // Save prediction
+        // ----------------------------------------------------
+
+        const {
+            error: saveError
+        } = await supabaseClient
+            .from("predictions")
+            .upsert(
+                {
+                    user_id: user.id,
+                    game_id: game.id,
+                    probability: probability
+                },
+                {
+                    onConflict:
+                        "user_id,game_id"
+                }
+            );
+
+
+        if (saveError) {
+
+            console.error(
+                saveError
+            );
+
+            status.textContent =
+                `Unable to save ${game.opponent}: ${saveError.message}`;
+
+            return;
+        }
+
+
+        updatedCount++;
+
+    }
+
+
+    // --------------------------------------------------------
+    // Finished
+    // --------------------------------------------------------
+
+    status.textContent =
+        `✓ ${updatedCount} prediction${
+            updatedCount === 1 ? "" : "s"
+        } updated.`;
+
+
+    // --------------------------------------------------------
+    // Reload page predictions
+    // --------------------------------------------------------
+
+    await loadPredictions();
+
+}
+
+// ------------------------------------------------------------
+// PARSE CSV LINE
+// ------------------------------------------------------------
+
+function parseCsvLine(line) {
+
+    const values = [];
+
+    let current = "";
+
+    let insideQuotes = false;
+
+
+    for (
+        let i = 0;
+        i < line.length;
+        i++
+    ) {
+
+        const character =
+            line[i];
+
+
+        if (character === '"') {
+
+            if (
+                insideQuotes &&
+                line[i + 1] === '"'
+            ) {
+
+                current += '"';
+
+                i++;
+
+            } else {
+
+                insideQuotes =
+                    !insideQuotes;
+
+            }
+
+        }
+
+        else if (
+            character === "," &&
+            !insideQuotes
+        ) {
+
+            values.push(current);
+
+            current = "";
+
+        }
+
+        else {
+
+            current += character;
+
+        }
+
+    }
+
+
+    values.push(current);
+
+
+    return values;
+
+}
+
 
 // ------------------------------------------------------------
 // SAVE PREDICTION
