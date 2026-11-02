@@ -11,12 +11,14 @@ async function loadLeaderboard() {
 
     if (error) {
         console.error("Leaderboard error:", error);
-        container.textContent = `Unable to load leaderboard: ${error.message}`;
+        container.textContent =
+            `Unable to load leaderboard: ${error.message}`;
         return;
     }
 
     if (!leaderboard || leaderboard.length === 0) {
-        container.innerHTML = "<p>No completed games have been scored yet.</p>";
+        container.innerHTML =
+            "<p>No completed games have been scored yet.</p>";
         return;
     }
 
@@ -29,7 +31,8 @@ async function loadLeaderboard() {
 
     if (gamesError) {
         console.error("Games error:", gamesError);
-        container.textContent = `Unable to load games: ${gamesError.message}`;
+        container.textContent =
+            `Unable to load games: ${gamesError.message}`;
         return;
     }
 
@@ -45,7 +48,8 @@ async function loadLeaderboard() {
         return;
     }
 
-    // Load predictions for completed games
+    // Load predictions for completed games.
+    // Do not filter by user_locked: unlocked predictions count too.
     const gameIds = games.map(game => game.id);
 
     let predictions = [];
@@ -66,13 +70,13 @@ async function loadLeaderboard() {
         predictions = data || [];
     }
 
-    // Match profile names to user IDs
+    // Match profile IDs to display names
     const profileMap = new Map();
 
     profiles.forEach(function(profile) {
         profileMap.set(
-            profile.display_name,
-            profile.id
+            profile.id.toLowerCase(),
+            profile.display_name
         );
     });
 
@@ -92,6 +96,7 @@ async function loadLeaderboard() {
                 <th>Contestant</th>
                 <th>Points</th>
                 <th>Games</th>
+                <th>Avg. Points/Game</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -100,6 +105,8 @@ async function loadLeaderboard() {
     const tbody = table.querySelector("tbody");
 
     leaderboard.forEach(function(entry, index) {
+
+        // Main leaderboard row
         const row = document.createElement("tr");
 
         const rankCell = document.createElement("td");
@@ -109,23 +116,36 @@ async function loadLeaderboard() {
         nameCell.textContent = entry.display_name;
 
         const pointsCell = document.createElement("td");
-        pointsCell.textContent = Number(entry.total_points).toFixed(2);
+        pointsCell.textContent =
+            Number(entry.total_points).toFixed(2);
 
         const gamesCell = document.createElement("td");
         gamesCell.textContent = entry.games;
+
+        const averagePoints = Number(entry.games) > 0
+            ? Number(entry.total_points) / Number(entry.games)
+            : 0;
+
+        const averageCell = document.createElement("td");
+        averageCell.textContent = averagePoints.toFixed(2);
 
         row.appendChild(rankCell);
         row.appendChild(nameCell);
         row.appendChild(pointsCell);
         row.appendChild(gamesCell);
+        row.appendChild(averageCell);
 
         tbody.appendChild(row);
 
         // Find this contestant's predictions
-        const userId = profileMap.get(entry.display_name);
+        const userId = profiles.find(
+            profile => profile.display_name === entry.display_name
+        )?.id;
 
         const contestantPredictions = predictions
-            .filter(prediction => prediction.user_id === userId)
+            .filter(prediction =>
+                prediction.user_id.toLowerCase() === userId?.toLowerCase()
+            )
             .sort((a, b) => {
                 const gameA = gameMap.get(a.game_id);
                 const gameB = gameMap.get(b.game_id);
@@ -136,8 +156,9 @@ async function loadLeaderboard() {
 
         // Create expandable game-by-game section
         const detailRow = document.createElement("tr");
+
         const detailCell = document.createElement("td");
-        detailCell.colSpan = 4;
+        detailCell.colSpan = 5;
 
         const details = document.createElement("details");
         details.className = "leaderboard-details";
@@ -148,10 +169,14 @@ async function loadLeaderboard() {
         details.appendChild(summary);
 
         if (contestantPredictions.length === 0) {
+
             const message = document.createElement("p");
             message.textContent = "No game predictions available.";
+
             details.appendChild(message);
+
         } else {
+
             const detailTable = document.createElement("table");
             detailTable.className = "leaderboard-table";
 
@@ -170,6 +195,7 @@ async function loadLeaderboard() {
             const detailBody = detailTable.querySelector("tbody");
 
             contestantPredictions.forEach(function(prediction) {
+
                 const game = gameMap.get(prediction.game_id);
 
                 if (!game) return;
