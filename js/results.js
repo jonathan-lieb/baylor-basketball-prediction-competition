@@ -87,6 +87,9 @@ if (profilesError) {
     return;
 }
 
+console.log("Predictions user IDs:", predictions.map(p => p.user_id));
+console.log("Profiles returned:", profiles);
+
 const profileMap = new Map(
     profiles.map(profile => [profile.id, profile.display_name])
 );
