@@ -59,31 +59,37 @@ async function loadResults() {
         games.map(game => game.id);
 
     const {
-        data: predictions,
-        error: predictionsError
-    } = await supabaseClient
-        .from("predictions")
-        .select(`
-            game_id,
-            user_id,
-            probability,
-            profiles (
-                display_name
-            )
-        `)
-        .in("game_id", gameIds);
+    data: predictions,
+    error: predictionsError
+} = await supabaseClient
+    .from("predictions")
+    .select("game_id, user_id, probability")
+    .in("game_id", gameIds);
 
+if (predictionsError) {
+    console.error("Predictions error:", predictionsError);
+    container.textContent =
+        `Unable to load predictions: ${predictionsError.message}`;
+    return;
+}
 
-    if (predictionsError) {
+const {
+    data: profiles,
+    error: profilesError
+} = await supabaseClient
+    .from("profiles")
+    .select("id, display_name");
 
-        console.error(predictionsError);
+if (profilesError) {
+    console.error("Profiles error:", profilesError);
+    container.textContent =
+        `Unable to load contestant names: ${profilesError.message}`;
+    return;
+}
 
-        container.textContent =
-            `Unable to load predictions: ${predictionsError.message}`;
-
-        return;
-    }
-
+const profileMap = new Map(
+    profiles.map(profile => [profile.id, profile.display_name])
+);
 
     // --------------------------------------------------------
     // GROUP PREDICTIONS BY GAME
@@ -273,7 +279,7 @@ async function loadResults() {
 
                     const name =
                         prediction.profiles
-                            ? prediction.profiles.display_name
+                            ? profileMap.get(prediction.user_id) || "Contestant"
                             : "Contestant";
 
 
