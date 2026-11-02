@@ -73,10 +73,7 @@ if (predictionsError) {
     return;
 }
 
-const {
-    data: profiles,
-    error: profilesError
-} = await supabaseClient
+const { data: profiles, error: profilesError } = await supabaseClient
     .from("profiles")
     .select("id, display_name");
 
@@ -87,12 +84,14 @@ if (profilesError) {
     return;
 }
 
-console.log("Predictions user IDs:", predictions.map(p => p.user_id));
-console.log("Profiles returned:", profiles);
+const profileMap = new Map();
 
-const profileMap = new Map(
-    profiles.map(profile => [profile.id, profile.display_name])
-);
+profiles.forEach(function(profile) {
+    profileMap.set(
+        profile.id.toLowerCase(),
+        profile.display_name
+    );
+});
 
     // --------------------------------------------------------
     // GROUP PREDICTIONS BY GAME
@@ -280,10 +279,7 @@ const profileMap = new Map(
                         document.createElement("tr");
 
 
-                    const name =
-                        prediction.profiles
-                            ? profileMap.get(prediction.user_id) || "Contestant"
-                            : "Contestant";
+                    const name =profileMap.get(prediction.user_id.toLowerCase()) || "Contestant";
 
 
                     const probability =
