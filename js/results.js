@@ -16,33 +16,32 @@ async function loadResults() {
 
 
     // --------------------------------------------------------
-    // GET COMPLETED GAMES
+    // GET SCORED RESULTS
     // --------------------------------------------------------
 
     const {
-        data: games,
-        error: gamesError
+        data: results,
+        error
     } = await supabaseClient
-        .from("games")
+        .from("prediction_scores")
         .select("*")
-        .eq("status", "final")
-        .order("tipoff_time", {
+        .order("game_date", {
             ascending: false
         });
 
 
-    if (gamesError) {
+    if (error) {
 
-        console.error(gamesError);
+        console.error("Results error:", error);
 
         container.textContent =
-            `Unable to load results: ${gamesError.message}`;
+            `Unable to load results: ${error.message}`;
 
         return;
     }
 
 
-    if (!games || games.length === 0) {
+    if (!results || results.length === 0) {
 
         container.innerHTML =
             "<p>No completed Baylor games yet.</p>";
@@ -52,62 +51,27 @@ async function loadResults() {
 
 
     // --------------------------------------------------------
-    // GET ALL PREDICTIONS FOR COMPLETED GAMES
+    // GROUP RESULTS BY GAME
     // --------------------------------------------------------
 
-    const gameIds =
-        games.map(game => game.id);
+    const gameMap = new Map();
 
-    const {
-    data: predictions,
-    error: predictionsError
-} = await supabaseClient
-    .from("predictions")
-    .select("game_id, user_id, probability")
-    .in("game_id", gameIds);
+    results.forEach(function(result) {
 
-if (predictionsError) {
-    console.error("Predictions error:", predictionsError);
-    container.textContent =
-        `Unable to load predictions: ${predictionsError.message}`;
-    return;
-}
+        if (!gameMap.has(result.game_id)) {
 
-const { data: profiles, error: profilesError } = await supabaseClient
-    .from("profiles")
-    .select("id, display_name");
+            gameMap.set(result.game_id, {
+                opponent: result.opponent,
+                game_date: result.game_date,
+                tipoff_time: result.tipoff_time,
+                baylor_score: result.baylor_score,
+                opponent_score: result.opponent_score,
+                predictions: []
+            });
 
-if (profilesError) {
-    console.error("Profiles error:", profilesError);
-    container.textContent =
-        `Unable to load contestant names: ${profilesError.message}`;
-    return;
-}
-
-const profileMap = new Map();
-
-profiles.forEach(function(profile) {
-    profileMap.set(
-        profile.id.toLowerCase(),
-        profile.display_name
-    );
-});
-
-    // --------------------------------------------------------
-    // GROUP PREDICTIONS BY GAME
-    // --------------------------------------------------------
-
-    const predictionMap = {};
-
-    predictions.forEach(function(prediction) {
-
-        if (!predictionMap[prediction.game_id]) {
-            predictionMap[prediction.game_id] = [];
         }
 
-        predictionMap[prediction.game_id].push(
-            prediction
-        );
+        gameMap.get(result.game_id).predictions.push(result);
 
     });
 
@@ -119,7 +83,7 @@ profiles.forEach(function(profile) {
     container.innerHTML = "";
 
 
-    games.forEach(function(game) {
+    gameMap.forEach(function(game) {
 
         const card =
             document.createElement("div");
@@ -145,7 +109,7 @@ profiles.forEach(function(profile) {
             document.createElement("p");
 
         date.textContent =
-            formatResultDate(game.tipoff_time);
+            formatResultDate(game.game_date);
 
         card.appendChild(date);
 
@@ -166,51 +130,13 @@ profiles.forEach(function(profile) {
 
 
         // ----------------------------------------------------
-        // DETERMINE ACTUAL OUTCOME
+        // SORT PREDICTIONS BY POINTS
         // ----------------------------------------------------
-
-        const baylorWon =
-            Number(game.baylor_score) >
-            Number(game.opponent_score);
-
-
-        const actualOutcome =
-            baylorWon ? 1 : 0;
-
-
-        // ----------------------------------------------------
-        // GET GAME PREDICTIONS
-        // ----------------------------------------------------
-
-        const gamePredictions =
-            predictionMap[game.id] || [];
-
-
-        // Sort by points earned, highest first
 
         const scoredPredictions =
-            gamePredictions.map(function(prediction) {
+            game.predictions.sort(function(a, b) {
 
-                const probability =
-                    Number(prediction.probability);
-
-                const points =
-                    100 * (
-                        1 -
-                        Math.pow(
-                            probability - actualOutcome,
-                            2
-                        )
-                    );
-
-                return {
-                    ...prediction,
-                    points: points
-                };
-
-            }).sort(function(a, b) {
-
-                return b.points - a.points;
+                return Number(b.points) - Number(a.points);
 
             });
 
@@ -237,17 +163,15 @@ profiles.forEach(function(profile) {
 
         if (scoredPredictions.length === 0) {
 
-            const noPredictions =
+            const message =
                 document.createElement("p");
 
-            noPredictions.textContent =
-                "No predictions were submitted for this game.";
+            message.textContent =
+                "No predictions available for this game.";
 
-            details.appendChild(noPredictions);
+            details.appendChild(message);
 
-        }
-
-        else {
+        } else {
 
             const table =
                 document.createElement("table");
@@ -272,51 +196,42 @@ profiles.forEach(function(profile) {
                 table.querySelector("tbody");
 
 
-            scoredPredictions.forEach(
-                function(prediction) {
+            scoredPredictions.forEach(function(prediction) {
 
-                    const row =
-                        document.createElement("tr");
-
-
-                    const name =profileMap.get(prediction.user_id.toLowerCase()) || "Contestant";
+                const row =
+                    document.createElement("tr");
 
 
-                    const probability =
-                        Math.round(
-                            Number(prediction.probability) * 100
-                        );
+                const nameCell =
+                    document.createElement("td");
+
+                nameCell.textContent =
+                    prediction.display_name;
 
 
-                    const contestantCell =
-                        document.createElement("td");
+                const probabilityCell =
+                    document.createElement("td");
 
-                    contestantCell.textContent =
-                        name;
-
-
-                    const probabilityCell =
-                        document.createElement("td");
-
-                    probabilityCell.textContent =
-                        `${probability}%`;
+                probabilityCell.textContent =
+                    `${Math.round(
+                        Number(prediction.probability) * 100
+                    )}%`;
 
 
-                    const pointsCell =
-                        document.createElement("td");
+                const pointsCell =
+                    document.createElement("td");
 
-                    pointsCell.textContent =
-                        prediction.points.toFixed(2);
+                pointsCell.textContent =
+                    Number(prediction.points).toFixed(2);
 
 
-                    row.appendChild(contestantCell);
-                    row.appendChild(probabilityCell);
-                    row.appendChild(pointsCell);
+                row.appendChild(nameCell);
+                row.appendChild(probabilityCell);
+                row.appendChild(pointsCell);
 
-                    tbody.appendChild(row);
+                tbody.appendChild(row);
 
-                }
-            );
+            });
 
 
             details.appendChild(table);
