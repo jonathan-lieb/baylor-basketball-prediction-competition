@@ -616,115 +616,86 @@ function setupCsvTools(games, predictions, user) {
 
 }
 
-function downloadPredictionsCsv(
-    games,
-    predictions
-) {
+function downloadPredictionsCsv(games, predictions) {
 
     const predictionMap = {};
 
     predictions.forEach(function(prediction) {
-
-        predictionMap[prediction.game_id] =
-            prediction;
-
+        predictionMap[prediction.game_id] = prediction;
     });
 
-
     const rows = [];
-
 
     rows.push([
         "game_id",
         "game_date",
         "opponent",
+        "espn_opponent_id",
         "location",
         "probability"
     ]);
 
-
     games.forEach(function(game) {
 
-        const prediction =
-            predictionMap[game.id];
+        const prediction = predictionMap[game.id];
 
-
-        const probability =
-            prediction
-                ? Number(prediction.probability)
-                : 0.5;
-
+        const probability = prediction
+            ? Number(prediction.probability)
+            : 0.5;
 
         rows.push([
             game.id,
             game.game_date,
             game.opponent,
+            game.espn_opponent_id ?? "",
             game.location,
             probability.toFixed(4)
         ]);
 
     });
 
+    const csv = rows
+        .map(function(row) {
 
-    const csv =
-        rows
-            .map(function(row) {
+            return row
+                .map(function(value) {
 
-                return row
-                    .map(function(value) {
+                    const text = String(value);
 
-                        const text =
-                            String(value);
+                    if (
+                        text.includes(",") ||
+                        text.includes('"') ||
+                        text.includes("\n")
+                    ) {
+                        return '"' +
+                            text.replace(/"/g, '""') +
+                            '"';
+                    }
 
-                        if (
-                            text.includes(",") ||
-                            text.includes('"') ||
-                            text.includes("\n")
-                        ) {
+                    return text;
 
-                            return '"' +
-                                text.replace(
-                                    /"/g,
-                                    '""'
-                                ) +
-                                '"';
+                })
+                .join(",");
 
-                        }
+        })
+        .join("\n");
 
-                        return text;
+    const blob = new Blob(
+        [csv],
+        {
+            type: "text/csv;charset=utf-8;"
+        }
+    );
 
-                    })
-                    .join(",");
+    const url = URL.createObjectURL(blob);
 
-            })
-            .join("\n");
-
-
-    const blob =
-        new Blob(
-            [csv],
-            {
-                type: "text/csv;charset=utf-8;"
-            }
-        );
-
-
-    const url =
-        URL.createObjectURL(blob);
-
-
-    const link =
-        document.createElement("a");
+    const link = document.createElement("a");
 
     link.href = url;
-
-    link.download =
-        "baylor_predictions.csv";
+    link.download = "baylor_predictions.csv";
 
     document.body.appendChild(link);
-
     link.click();
-
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
@@ -834,14 +805,15 @@ async function uploadPredictionsCsv(
     const headers =
         parseCsvLine(lines[0]);
 
-
+    
     const expectedHeaders = [
-        "game_id",
-        "game_date",
-        "opponent",
-        "location",
-        "probability"
-    ];
+    "game_id",
+    "game_date",
+    "opponent",
+    "espn_opponent_id",
+    "location",
+    "probability"
+];
 
 
     const headersMatch =
@@ -897,31 +869,19 @@ async function uploadPredictionsCsv(
             parseCsvLine(lines[i]);
 
 
-        if (values.length !== 5) {
 
-            status.textContent =
-                `Invalid CSV row ${i + 1}.`;
+if (values.length !== 6) {
+    status.textContent =
+        `Invalid CSV row ${i + 1}.`;
+    return;
+}
 
-            return;
-        }
-
-
-        const gameId =
-            values[0].trim();
-
-        const gameDate =
-            values[1].trim();
-
-        const opponent =
-            values[2].trim();
-
-        const location =
-            values[3].trim();
-
-        const probability =
-            Number(
-                values[4].trim()
-            );
+const gameId = values[0].trim();
+const gameDate = values[1].trim();
+const opponent = values[2].trim();
+const espnOpponentId = values[3].trim();
+const location = values[4].trim();
+const probability = Number(values[5].trim());
 
 
         // ----------------------------------------------------
@@ -970,11 +930,17 @@ console.log("Checking game:", {
     databaseLocation: game.location
 });
 
+const databaseOpponentId =
+    game.espn_opponent_id == null
+        ? ""
+        : String(game.espn_opponent_id);
+
 if (
     String(game.game_date).trim() !==
         String(normalizedGameDate).trim() ||
     String(game.opponent).trim() !==
         String(opponent).trim() ||
+    databaseOpponentId !== espnOpponentId ||
     String(game.location).trim() !==
         String(location).trim()
 ) {
@@ -984,6 +950,7 @@ if (
 
     return;
 }
+
 
 
         // ----------------------------------------------------
